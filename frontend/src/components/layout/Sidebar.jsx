@@ -1,5 +1,9 @@
-import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import AuthAlert from '../auth/AuthAlert'
 import { ROUTES } from '../../constants/routes'
+import { useAuth } from '../../contexts/AuthContext'
+import { getAuthErrorMessage } from '../../lib/auth'
 
 const navItems = [
   { to: ROUTES.DASHBOARD, label: 'Dashboard', icon: '◈' },
@@ -30,6 +34,30 @@ function NavItem({ to, label, icon, onClick }) {
 }
 
 export default function Sidebar({ isOpen, onClose }) {
+  const navigate = useNavigate()
+  const { user, signOut } = useAuth()
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
+
+  const displayEmail = user?.email ?? 'you@example.com'
+  const displayName =
+    user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'User'
+
+  async function handleLogout() {
+    setLogoutError('')
+    setLoggingOut(true)
+
+    try {
+      await signOut()
+      onClose()
+      navigate(ROUTES.LOGIN, { replace: true })
+    } catch (err) {
+      setLogoutError(getAuthErrorMessage(err))
+    } finally {
+      setLoggingOut(false)
+    }
+  }
+
   return (
     <>
       {isOpen && (
@@ -61,11 +89,23 @@ export default function Sidebar({ isOpen, onClose }) {
           ))}
         </nav>
 
-        <div className="border-t border-mirror-border-subtle p-3">
+        <div className="space-y-3 border-t border-mirror-border-subtle p-3">
+          <AuthAlert variant="error" message={logoutError} />
+
           <div className="rounded-lg bg-mirror-elevated px-3 py-2.5">
             <p className="text-xs text-mirror-subtle">Signed in as</p>
-            <p className="truncate text-sm font-medium">you@example.com</p>
+            <p className="truncate text-sm font-medium">{displayName}</p>
+            <p className="truncate text-xs text-mirror-muted">{displayEmail}</p>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="w-full rounded-lg border border-mirror-border px-3 py-2 text-sm font-medium text-mirror-muted transition-colors hover:bg-mirror-elevated hover:text-mirror-text disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loggingOut ? 'Signing out...' : 'Log out'}
+          </button>
         </div>
       </aside>
     </>

@@ -1,4 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
+import GuestRoute from '../components/auth/GuestRoute'
+import ProtectedRoute from '../components/auth/ProtectedRoute'
 import { ROUTES } from '../constants/routes'
 import MarketingLayout from '../layouts/MarketingLayout'
 import AuthLayout from '../layouts/AuthLayout'
@@ -17,19 +19,29 @@ export const router = createBrowserRouter([
     children: [{ path: ROUTES.LANDING, element: <Landing /> }],
   },
   {
-    element: <AuthLayout />,
+    element: <GuestRoute />,
     children: [
-      { path: ROUTES.LOGIN, element: <Login /> },
-      { path: ROUTES.SIGNUP, element: <Signup /> },
+      {
+        element: <AuthLayout />,
+        children: [
+          { path: ROUTES.LOGIN, element: <Login /> },
+          { path: ROUTES.SIGNUP, element: <Signup /> },
+        ],
+      },
     ],
   },
   {
-    element: <AppLayout />,
+    element: <ProtectedRoute />,
     children: [
-      { path: ROUTES.SETUP, element: <Setup /> },
-      { path: ROUTES.DASHBOARD, element: <Dashboard /> },
-      { path: ROUTES.CHAT, element: <Chat /> },
-      { path: ROUTES.JOURNAL, element: <Journal /> },
+      {
+        element: <AppLayout />,
+        children: [
+          { path: ROUTES.SETUP, element: <Setup /> },
+          { path: ROUTES.DASHBOARD, element: <Dashboard /> },
+          { path: ROUTES.CHAT, element: <Chat /> },
+          { path: ROUTES.JOURNAL, element: <Journal /> },
+        ],
+      },
     ],
   },
 ])

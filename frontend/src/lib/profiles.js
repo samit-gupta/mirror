@@ -104,3 +104,44 @@ export async function getProfile(userId) {
 
   return data
 }
+export function parseDreamLifeFields(dreamLife) {
+  if (!dreamLife?.trim()) {
+    return { goals: '', healthGoal: '', lifeVision: '' }
+  }
+
+  const goalsMatch = dreamLife.match(/Career Goal:\n([\s\S]*?)(?:\n\n|$)/)
+  const healthMatch = dreamLife.match(/Health Goal:\n([\s\S]*?)(?:\n\n|$)/)
+  const visionMatch = dreamLife.match(/Dream Life:\n([\s\S]*)$/)
+
+  if (goalsMatch || healthMatch || visionMatch) {
+    return {
+      goals: goalsMatch?.[1]?.trim() ?? '',
+      healthGoal: healthMatch?.[1]?.trim() ?? '',
+      lifeVision: visionMatch?.[1]?.trim() ?? '',
+    }
+  }
+
+  return {
+    goals: '',
+    healthGoal: '',
+    lifeVision: dreamLife.trim(),
+  }
+}
+
+export function normalizeProfileForFutureSelf(profile) {
+  if (!profile) {
+    return null
+  }
+
+  const parsed = parseDreamLifeFields(profile.dream_life)
+
+  return {
+    name: profile.name?.trim() || 'Friend',
+    currentAge: profile.current_age,
+    futureAge: profile.future_age,
+    goals: parsed.goals,
+    dreamSalary: '',
+    healthGoal: parsed.healthGoal,
+    lifeVision: parsed.lifeVision,
+  }
+}

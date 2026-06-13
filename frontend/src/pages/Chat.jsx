@@ -84,30 +84,51 @@ export default function Chat() {
 
   async function handleSend(event) {
     event.preventDefault()
-
+  
     const trimmed = input.trim()
-
+  
     if (!trimmed || sending || !conversationId || !user) {
       return
     }
-
+  
     setSending(true)
     setError('')
     setInput('')
-
+  
+    const tempId = `temp-${Date.now()}`
+  
+    const tempUserMessage = {
+      id: tempId,
+      message: trimmed,
+      sender: 'user',
+      timestamp: 'Sending...',
+      createdAt: new Date().toISOString(),
+    }
+  
+    // show user message instantly
+    setMessages((prev) => [...prev, tempUserMessage])
+  
     try {
       const { userMessage, assistantMessage } = await sendChatMessage({
         userId: user.id,
         conversationId,
         content: trimmed,
       })
-
-      setMessages((prev) => [
-        ...prev,
-        mapMessageForUi(userMessage),
-        mapMessageForUi(assistantMessage),
-      ])
+  
+      setMessages((prev) => {
+        const withoutTemp = prev.filter((msg) => msg.id !== tempId)
+  
+        return [
+          ...withoutTemp,
+          mapMessageForUi(userMessage),
+          mapMessageForUi(assistantMessage),
+        ]
+      })
     } catch (err) {
+      setMessages((prev) =>
+        prev.filter((msg) => msg.id !== tempId)
+      )
+  
       setInput(trimmed)
       setError(getAuthErrorMessage(err))
       inputRef.current?.focus()

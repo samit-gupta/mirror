@@ -26,6 +26,7 @@ export default function Setup() {
   const [healthGoal, setHealthGoal] = useState('')
   const [dreamLife, setDreamLife] = useState('')
 
+  const [currentStep, setCurrentStep] = useState(1)
   const [loadingProfile, setLoadingProfile] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -72,11 +73,56 @@ export default function Setup() {
       })
   }, [user])
 
+  // Validate only the fields belonging to the given step number.
+  function validateStep(step) {
+    if (step === 1) {
+      if (!name.trim()) return 'Full name is required.'
+      const current = Number(currentAge)
+      if (!currentAge || Number.isNaN(current) || current < 1 || current > 120)
+        return 'Enter a valid current age between 1 and 120.'
+      const future = Number(futureAge)
+      if (!futureAge || Number.isNaN(future) || future < 1 || future > 150)
+        return 'Enter a valid future age between 1 and 150.'
+      if (future <= current)
+        return 'Future age must be greater than your current age.'
+      return null
+    }
+
+    if (step === 2) {
+      if (!careerGoal.trim()) return 'Career goal is required.'
+      if (!healthGoal.trim()) return 'Health goal is required.'
+      return null
+    }
+
+    if (step === 3) {
+      if (!dreamLife.trim()) return 'Dream life description is required.'
+      return null
+    }
+
+    return null
+  }
+
+  function handleNext() {
+    setError('')
+    const stepError = validateStep(currentStep)
+    if (stepError) {
+      setError(stepError)
+      return
+    }
+    setCurrentStep((s) => s + 1)
+  }
+
+  function handleBack() {
+    setError('')
+    setCurrentStep((s) => s - 1)
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
     setSuccess('')
 
+    // Full validation as a safety net before saving.
     const validationError = validateProfileForm({
       name,
       currentAge,
@@ -134,11 +180,26 @@ export default function Setup() {
         </p>
       </div>
 
+      {/* Step progress bar */}
       <div className="mb-8 flex gap-2">
         {steps.map((step) => (
           <div key={step.id} className="flex-1">
-            <div className="h-1 rounded-full bg-mirror-border" />
-            <p className="mt-2 text-xs text-mirror-subtle">{step.label}</p>
+            <div
+              className={`h-1 rounded-full transition-colors duration-300 ${
+                step.id <= currentStep ? 'bg-mirror-accent' : 'bg-mirror-border'
+              }`}
+            />
+            <p
+              className={`mt-2 text-xs transition-colors duration-300 ${
+                step.id === currentStep
+                  ? 'font-medium text-mirror-accent'
+                  : step.id < currentStep
+                    ? 'text-mirror-muted'
+                    : 'text-mirror-subtle'
+              }`}
+            >
+              {step.label}
+            </p>
           </div>
         ))}
       </div>
@@ -148,125 +209,163 @@ export default function Setup() {
           <AuthAlert variant="error" message={error} />
           <AuthAlert variant="success" message={success} />
 
-          <div>
-            <label htmlFor="full-name" className="block text-sm font-medium text-mirror-muted">
-              Full Name
-            </label>
-            <input
-              id="full-name"
-              name="name"
-              type="text"
-              autoComplete="name"
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Alex Morgan"
-              disabled={submitting}
-              className={inputClassName}
-            />
-          </div>
+          {/* ── Step 1: About You ── */}
+          {currentStep === 1 && (
+            <>
+              <div>
+                <label htmlFor="full-name" className="block text-sm font-medium text-mirror-muted">
+                  Full Name
+                </label>
+                <input
+                  id="full-name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Alex Morgan"
+                  disabled={submitting}
+                  className={inputClassName}
+                />
+              </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="current-age" className="block text-sm font-medium text-mirror-muted">
+                    Current Age
+                  </label>
+                  <input
+                    id="current-age"
+                    name="currentAge"
+                    type="number"
+                    min={1}
+                    max={120}
+                    required
+                    value={currentAge}
+                    onChange={(event) => setCurrentAge(event.target.value)}
+                    placeholder="28"
+                    disabled={submitting}
+                    className={inputClassName}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="future-age" className="block text-sm font-medium text-mirror-muted">
+                    Future Age
+                  </label>
+                  <input
+                    id="future-age"
+                    name="futureAge"
+                    type="number"
+                    min={1}
+                    max={150}
+                    required
+                    value={futureAge}
+                    onChange={(event) => setFutureAge(event.target.value)}
+                    placeholder="38"
+                    disabled={submitting}
+                    className={inputClassName}
+                  />
+                  <p className="mt-1.5 text-xs text-mirror-subtle">
+                    The age of the future self you want to speak with.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Step 2: Your Future ── */}
+          {currentStep === 2 && (
+            <>
+              <div>
+                <label htmlFor="career-goal" className="block text-sm font-medium text-mirror-muted">
+                  Career Goal
+                </label>
+                <textarea
+                  id="career-goal"
+                  name="careerGoal"
+                  rows={3}
+                  required
+                  value={careerGoal}
+                  onChange={(event) => setCareerGoal(event.target.value)}
+                  placeholder="Lead a team doing meaningful work in tech..."
+                  disabled={submitting}
+                  className={`${inputClassName} resize-none`}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="health-goal" className="block text-sm font-medium text-mirror-muted">
+                  Health Goal
+                </label>
+                <textarea
+                  id="health-goal"
+                  name="healthGoal"
+                  rows={3}
+                  required
+                  value={healthGoal}
+                  onChange={(event) => setHealthGoal(event.target.value)}
+                  placeholder="Consistent energy, strong fitness, and restful sleep..."
+                  disabled={submitting}
+                  className={`${inputClassName} resize-none`}
+                />
+              </div>
+            </>
+          )}
+
+          {/* ── Step 3: Your Vision ── */}
+          {currentStep === 3 && (
             <div>
-              <label htmlFor="current-age" className="block text-sm font-medium text-mirror-muted">
-                Current Age
+              <label htmlFor="dream-life" className="block text-sm font-medium text-mirror-muted">
+                Dream Life
               </label>
-              <input
-                id="current-age"
-                name="currentAge"
-                type="number"
-                min={1}
-                max={120}
+              <textarea
+                id="dream-life"
+                name="dreamLife"
+                rows={4}
                 required
-                value={currentAge}
-                onChange={(event) => setCurrentAge(event.target.value)}
-                placeholder="28"
+                value={dreamLife}
+                onChange={(event) => setDreamLife(event.target.value)}
+                placeholder="Calm mornings, deep relationships, financial freedom, and work that feels like purpose..."
                 disabled={submitting}
-                className={inputClassName}
+                className={`${inputClassName} resize-none`}
               />
             </div>
+          )}
 
-            <div>
-              <label htmlFor="future-age" className="block text-sm font-medium text-mirror-muted">
-                Future Age
-              </label>
-              <input
-                id="future-age"
-                name="futureAge"
-                type="number"
-                min={1}
-                max={150}
-                required
-                value={futureAge}
-                onChange={(event) => setFutureAge(event.target.value)}
-                placeholder="38"
+          {/* ── Navigation buttons ── */}
+          <div className={`flex gap-3 ${currentStep > 1 ? 'flex-row' : 'flex-col'}`}>
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={handleBack}
                 disabled={submitting}
-                className={inputClassName}
-              />
-              <p className="mt-1.5 text-xs text-mirror-subtle">
-                The age of the future self you want to speak with.
-              </p>
-            </div>
-          </div>
+                className="flex-1 rounded-lg border border-mirror-border py-2.5 text-sm font-semibold text-mirror-muted transition-colors hover:border-mirror-accent hover:text-mirror-text disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Back
+              </button>
+            )}
 
-          <div>
-            <label htmlFor="career-goal" className="block text-sm font-medium text-mirror-muted">
-              Career Goal
-            </label>
-            <textarea
-              id="career-goal"
-              name="careerGoal"
-              rows={3}
-              required
-              value={careerGoal}
-              onChange={(event) => setCareerGoal(event.target.value)}
-              placeholder="Lead a team doing meaningful work in tech..."
-              disabled={submitting}
-              className={`${inputClassName} resize-none`}
-            />
+            {currentStep < steps.length ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={submitting}
+                className="flex-1 rounded-lg bg-mirror-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-mirror-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 rounded-lg bg-mirror-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-mirror-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? 'Saving profile...' : 'Save and continue'}
+              </button>
+            )}
           </div>
-
-          <div>
-            <label htmlFor="health-goal" className="block text-sm font-medium text-mirror-muted">
-              Health Goal
-            </label>
-            <textarea
-              id="health-goal"
-              name="healthGoal"
-              rows={3}
-              required
-              value={healthGoal}
-              onChange={(event) => setHealthGoal(event.target.value)}
-              placeholder="Consistent energy, strong fitness, and restful sleep..."
-              disabled={submitting}
-              className={`${inputClassName} resize-none`}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="dream-life" className="block text-sm font-medium text-mirror-muted">
-              Dream Life
-            </label>
-            <textarea
-              id="dream-life"
-              name="dreamLife"
-              rows={4}
-              required
-              value={dreamLife}
-              onChange={(event) => setDreamLife(event.target.value)}
-              placeholder="Calm mornings, deep relationships, financial freedom, and work that feels like purpose..."
-              disabled={submitting}
-              className={`${inputClassName} resize-none`}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-mirror-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-mirror-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitting ? 'Saving profile...' : 'Save and continue'}
-          </button>
         </form>
       </div>
     </div>

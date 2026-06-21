@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { saveMemory } from './memories'
 
 export function buildDreamLife({ careerGoal, healthGoal, dreamLife }) {
   const sections = []
@@ -84,11 +85,38 @@ export async function saveProfile({
     .select()
     .single()
 
-  if (error) {
-    throw error
-  }
+    if (error) {
+      throw error
+    }
 
-  return data
+    await supabase
+    .from('memories')
+    .delete()
+    .eq('user_id', userId)
+    .eq('memory_type', 'goal')
+
+    await saveMemory({
+      userId,
+      memoryType: 'goal',
+      content: careerGoal.trim(),
+      importance: 5,
+    })
+    
+    await saveMemory({
+      userId,
+      memoryType: 'goal',
+      content: healthGoal.trim(),
+      importance: 5,
+    })
+    
+    await saveMemory({
+      userId,
+      memoryType: 'goal',
+      content: dreamLife.trim(),
+      importance: 4,
+    })
+    
+    return data
 }
 
 export async function getProfile(userId) {

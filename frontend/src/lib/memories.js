@@ -20,3 +20,19 @@ export async function saveMemory({
     throw error
   }
 }
+
+export async function getMemories(userId, { limit = 20 } = {}) {
+  const { data, error } = await supabase
+    .from('memories')
+    .select('memory_type, content, importance')
+    .eq('user_id', userId)
+    .order('importance', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    throw error
+  }
+
+  return data ?? []
+}

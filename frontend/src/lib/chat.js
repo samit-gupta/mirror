@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { generateFutureSelfReply } from './gemini'
+import { getMemories } from './memories'
 import { getProfile } from './profiles'
 
 export function formatMessageTime(isoString) {
@@ -89,7 +90,10 @@ export async function sendChatMessage({ userId, conversationId, content }) {
     throw new Error('Message cannot be empty.')
   }
 
-  const profile = await getProfile(userId)
+  const [profile, memories] = await Promise.all([
+    getProfile(userId),
+    getMemories(userId),
+  ])
 
   if (!profile) {
     throw new Error('Complete your profile setup before chatting with your future self.')
@@ -106,6 +110,7 @@ export async function sendChatMessage({ userId, conversationId, content }) {
 
   const aiContent = await generateFutureSelfReply({
     profile,
+    memories,
     history,
     userMessage: trimmed,
   })

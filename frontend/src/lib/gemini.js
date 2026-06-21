@@ -29,7 +29,64 @@ Remember what they have already shared. Reference prior topics, feelings, and de
 Do not reset the conversation or pretend you are meeting for the first time.`
 }
 
-export function buildFutureSelfSystemPrompt(profile, history = []) {
+// Calls Gemini with a small focused prompt to rewrite raw goal text into
+// natural-language third-person intentions. Falls back to raw content on
+// any error or if the returned line count does not match.
+async function paraphraseMemories(memories) {
+  if (!memories?.length) {
+    return []
+  }
+
+  const client = getClient()
+  const model = client.getGenerativeModel({ model: MODEL })
+
+  const rawList = memories.map((m) => m.content.trim()).join('\n')
+
+  const prompt = `Rewrite each of the following goals as a concise phrase starting with a base-form verb. Write in the third person. Preserve meaning. Return only the rewritten phrases — one per line, in the same order — with no numbering, labels, or extra text.
+
+Goals:
+${rawList}`
+
+  try {
+    const result = await model.generateContent(prompt)
+    const lines = result.response
+      .text()
+      .trim()
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+
+    // Fall back if line count does not match — prevents misaligned injection
+    if (lines.length !== memories.length) {
+      return memories.map((m) => m.content.trim())
+    }
+
+    return lines
+  } catch {
+    return memories.map((m) => m.content.trim())
+  }
+}
+
+function buildMemoriesSection(paraphrased) {
+  if (!paraphrased?.length) {
+    return ''
+  }
+
+  const sentences = paraphrased.map((phrase, i) => {
+    const lower = phrase.charAt(0).toLowerCase() + phrase.slice(1)
+    const prefix =
+      i === paraphrased.length - 1 && paraphrased.length > 1
+        ? 'And they want to'
+        : 'They want to'
+    return `${prefix} ${lower}`
+  })
+
+  const paragraph = sentences.join('. ') + '.'
+
+  return `\nWHAT YOU REMEMBER\nYour younger self has told you what they are working toward. You carry this into every conversation:\n\n${paragraph}\n\nDo not recite this back to them. Let it shape how you listen, what you notice, and the questions you ask.`
+}
+
+export function buildFutureSelfSystemPrompt(profile, history = [], paraphrased = []) {
   const normalized = normalizeProfileForFutureSelf(profile)
 
   if (!normalized) {
@@ -74,6 +131,7 @@ Weave these into your replies naturally. Show you remember what mattered to them
 
 CONVERSATION MEMORY
 ${conversationGuidance}
+${buildMemoriesSection(paraphrased)}
 
 VOICE & TONE
 - First person always: "When I was your age…" / "What helped me was…" / "Looking back from here…"
@@ -109,11 +167,14 @@ function toGeminiHistory(messages) {
   }))
 }
 
-export async function generateFutureSelfReply({ profile, history, userMessage }) {
+export async function generateFutureSelfReply({ profile, memories = [], history, userMessage }) {
   const client = getClient()
+
+  const paraphrased = await paraphraseMemories(memories)
+
   const model = client.getGenerativeModel({
     model: MODEL,
-    systemInstruction: buildFutureSelfSystemPrompt(profile, history),
+    systemInstruction: buildFutureSelfSystemPrompt(profile, history, paraphrased),
   })
 
   const chat = model.startChat({

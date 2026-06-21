@@ -102,15 +102,22 @@ export default function Setup() {
     return null
   }
 
-  function handleNext() {
-    setError('')
-    const stepError = validateStep(currentStep)
-    if (stepError) {
-      setError(stepError)
-      return
-    }
-    setCurrentStep((s) => s + 1)
+  function handleNext(event) {
+  if (event) {
+    event.preventDefault()
   }
+
+  setError('')
+
+  const stepError = validateStep(currentStep)
+
+  if (stepError) {
+    setError(stepError)
+    return
+  }
+
+  setCurrentStep((s) => s + 1)
+}
 
   function handleBack() {
     setError('')
@@ -350,7 +357,7 @@ export default function Setup() {
             {currentStep < steps.length ? (
               <button
                 type="button"
-                onClick={handleNext}
+                onClick={(event) => handleNext(event)}
                 disabled={submitting}
                 className="flex-1 rounded-lg bg-mirror-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-mirror-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
               >

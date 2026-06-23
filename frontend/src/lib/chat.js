@@ -113,6 +113,7 @@ export async function sendChatMessage({ userId, conversationId, content }) {
     memories,
     history,
     userMessage: trimmed,
+    userId,
   })
 
   const assistantMessage = await saveMessage({

@@ -3,6 +3,10 @@ import { normalizeProfileForFutureSelf } from './profiles'
 
 const MODEL = 'gemini-2.5-flash'
 
+// sessionStorage key for caching paraphrased memory phrases, scoped by user.
+// Invalidated by clearParaphraseCache() whenever the user saves their profile.
+const paraphraseCacheKey = (userId) => `mirror_paraphrased_${userId}`
+
 function getClient() {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY
 
@@ -29,12 +33,32 @@ Remember what they have already shared. Reference prior topics, feelings, and de
 Do not reset the conversation or pretend you are meeting for the first time.`
 }
 
+// Clears the paraphrase cache for a user. Call this whenever memories change
+// (i.e. after saveProfile) so the next conversation rebuilds fresh phrases.
+export function clearParaphraseCache(userId) {
+  sessionStorage.removeItem(paraphraseCacheKey(userId))
+}
+
 // Calls Gemini with a small focused prompt to rewrite raw goal text into
 // natural-language third-person intentions. Falls back to raw content on
 // any error or if the returned line count does not match.
-async function paraphraseMemories(memories) {
+// Results are cached in sessionStorage for the duration of the browser session
+// so that this extra API call fires only once per session, not on every message.
+async function paraphraseMemories(memories, userId) {
   if (!memories?.length) {
     return []
+  }
+
+  // Return cached result if available, avoiding a redundant Gemini call.
+  if (userId) {
+    try {
+      const cached = sessionStorage.getItem(paraphraseCacheKey(userId))
+      if (cached) {
+        return JSON.parse(cached)
+      }
+    } catch {
+      // Ignore parse errors — fall through to a fresh Gemini call.
+    }
   }
 
   const client = getClient()
@@ -56,9 +80,18 @@ ${rawList}`
       .map((l) => l.trim())
       .filter(Boolean)
 
-    // Fall back if line count does not match — prevents misaligned injection
+    // Fall back if line count does not match — prevents misaligned injection.
     if (lines.length !== memories.length) {
       return memories.map((m) => m.content.trim())
+    }
+
+    // Persist result for the rest of this browser session.
+    if (userId) {
+      try {
+        sessionStorage.setItem(paraphraseCacheKey(userId), JSON.stringify(lines))
+      } catch {
+        // sessionStorage may be unavailable (e.g. private browsing quota). Non-fatal.
+      }
     }
 
     return lines
@@ -167,10 +200,10 @@ function toGeminiHistory(messages) {
   }))
 }
 
-export async function generateFutureSelfReply({ profile, memories = [], history, userMessage }) {
+export async function generateFutureSelfReply({ profile, memories = [], history, userMessage, userId }) {
   const client = getClient()
 
-  const paraphrased = await paraphraseMemories(memories)
+  const paraphrased = await paraphraseMemories(memories, userId)
 
   const model = client.getGenerativeModel({
     model: MODEL,

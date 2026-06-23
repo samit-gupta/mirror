@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { saveMemory } from './memories'
+import { clearParaphraseCache } from './gemini'
 
 export function buildDreamLife({ careerGoal, healthGoal, dreamLife }) {
   const sections = []
@@ -95,27 +96,34 @@ export async function saveProfile({
     .eq('user_id', userId)
     .eq('memory_type', 'goal')
 
+    // Invalidate the paraphrase cache immediately after the old memories are
+    // deleted and before any new ones are written. This guarantees the cache
+    // is cleared even if a subsequent saveMemory() call throws — preventing
+    // the AI from receiving stale paraphrased phrases that no longer match
+    // the database state.
+    clearParaphraseCache(userId)
+
     await saveMemory({
       userId,
       memoryType: 'goal',
       content: careerGoal.trim(),
       importance: 5,
     })
-    
+
     await saveMemory({
       userId,
       memoryType: 'goal',
       content: healthGoal.trim(),
       importance: 5,
     })
-    
+
     await saveMemory({
       userId,
       memoryType: 'goal',
       content: dreamLife.trim(),
       importance: 4,
     })
-    
+
     return data
 }
 

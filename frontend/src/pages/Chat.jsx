@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import AuthAlert from '../components/auth/AuthAlert'
 import ChatBubble from '../components/ui/ChatBubble'
 import { ROUTES } from '../constants/routes'
@@ -18,6 +18,8 @@ const inputClassName =
 
 export default function Chat() {
   const { user } = useAuth()
+  const { conversationId: paramConversationId } = useParams()
+  const navigate = useNavigate()
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -43,22 +45,27 @@ export default function Chat() {
     async function loadChat() {
       setLoading(true)
       setError('')
+      setMessages([])
 
       try {
-        const [userProfile, conversation] = await Promise.all([
+        // No conversationId in URL — get or create and redirect to canonical URL.
+        if (!paramConversationId) {
+          const conv = await getOrCreateConversation(user.id)
+          if (!cancelled) {
+            navigate(`/chat/${conv.id}`, { replace: true })
+          }
+          return
+        }
+
+        const [userProfile, rows] = await Promise.all([
           getProfile(user.id),
-          getOrCreateConversation(user.id),
+          getConversationMessages(paramConversationId),
         ])
 
         if (cancelled) return
 
         setProfile(userProfile)
-        setConversationId(conversation.id)
-
-        const rows = await getConversationMessages(conversation.id)
-
-        if (cancelled) return
-
+        setConversationId(paramConversationId)
         setMessages(rows.map(mapMessageForUi))
       } catch (err) {
         if (!cancelled) {
@@ -76,7 +83,7 @@ export default function Chat() {
     return () => {
       cancelled = true
     }
-  }, [user])
+  }, [user, paramConversationId, navigate])
 
   useEffect(() => {
     scrollToBottom()

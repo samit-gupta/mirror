@@ -50,18 +50,28 @@ export async function getOrCreateConversation(userId) {
   return created
 }
 
-export async function getConversationMessages(conversationId) {
-  const { data, error } = await supabase
+export async function getConversationMessages(conversationId, { limit } = {}) {
+  let query = supabase
     .from('messages')
     .select('id, role, content, created_at')
     .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true })
+
+  if (limit) {
+    // Fetch newest-first so the DB applies the limit to the most recent rows,
+    // then reverse to restore chronological order for Gemini.
+    query = query.order('created_at', { ascending: false }).limit(limit)
+  } else {
+    query = query.order('created_at', { ascending: true })
+  }
+
+  const { data, error } = await query
 
   if (error) {
     throw error
   }
 
-  return data ?? []
+  const rows = data ?? []
+  return limit ? rows.reverse() : rows
 }
 
 export async function saveMessage({ conversationId, userId, role, content }) {
@@ -99,7 +109,7 @@ export async function sendChatMessage({ userId, conversationId, content }) {
     throw new Error('Complete your profile setup before chatting with your future self.')
   }
 
-  const history = await getConversationMessages(conversationId)
+  const history = await getConversationMessages(conversationId, { limit: 20 })
 
   const userMessage = await saveMessage({
     conversationId,
@@ -193,4 +203,33 @@ export async function getActiveDaysCount(userId) {
   )
 
   return uniqueDays.size
+}
+
+export async function getConversations(userId) {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select('id, title, updated_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(20)
+
+  if (error) {
+    throw error
+  }
+
+  return data ?? []
+}
+
+export async function createConversation(userId, title = 'Future Self') {
+  const { data, error } = await supabase
+    .from('conversations')
+    .insert({ user_id: userId, title })
+    .select('id, title, created_at, updated_at')
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data
 }

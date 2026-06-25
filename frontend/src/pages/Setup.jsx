@@ -356,6 +356,7 @@ export default function Setup() {
 
             {currentStep < steps.length ? (
               <button
+                key="next"
                 type="button"
                 onClick={(event) => handleNext(event)}
                 disabled={submitting}
@@ -365,6 +366,7 @@ export default function Setup() {
               </button>
             ) : (
               <button
+                key="submit"
                 type="submit"
                 disabled={submitting}
                 className="flex-1 rounded-lg bg-mirror-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-mirror-accent-hover disabled:cursor-not-allowed disabled:opacity-60"

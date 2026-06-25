@@ -28,7 +28,7 @@ function buildConversationGuidance(history) {
     return `This may be your first exchange. Introduce yourself naturally as their future self — e.g. "I am you, … years from now."`
   }
 
-  return `You have an ongoing conversation with your younger self (${history.length} earlier messages).
+  return `You have an ongoing conversation with your younger self (${history.length} recent messages in context).
 Remember what they have already shared. Reference prior topics, feelings, and decisions when relevant.
 Do not reset the conversation or pretend you are meeting for the first time.`
 }

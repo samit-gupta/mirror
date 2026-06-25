@@ -1,22 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import AuthAlert from '../auth/AuthAlert'
 import { ROUTES } from '../../constants/routes'
 import { useAuth } from '../../contexts/AuthContext'
 import { getAuthErrorMessage } from '../../lib/auth'
+import { createConversation, getConversations } from '../../lib/chat'
 
 const navItems = [
   { to: ROUTES.DASHBOARD, label: 'Dashboard', icon: '◈' },
-  { to: ROUTES.CHAT, label: 'Chat', icon: '◎' },
+  { to: ROUTES.CHAT, label: 'Chat', icon: '◎', end: true },
   { to: ROUTES.JOURNAL, label: 'Journal', icon: '◇' },
   { to: ROUTES.MEMORIES, label: 'Memory Vault', icon: '❂' },
   { to: ROUTES.SETUP, label: 'Setup', icon: '⚙' },
 ]
 
-function NavItem({ to, label, icon, onClick }) {
+function NavItem({ to, label, icon, onClick, end }) {
   return (
     <NavLink
       to={to}
+      end={end}
       onClick={onClick}
       className={({ isActive }) =>
         `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
@@ -39,10 +41,29 @@ export default function Sidebar({ isOpen, onClose }) {
   const { user, signOut } = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
+  const [conversations, setConversations] = useState([])
 
   const displayEmail = user?.email ?? 'you@example.com'
   const displayName =
     user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? 'User'
+
+  useEffect(() => {
+    if (!user) return
+    getConversations(user.id)
+      .then(setConversations)
+      .catch(() => {})
+  }, [user])
+
+  async function handleNewChat() {
+    try {
+      const conv = await createConversation(user.id)
+      setConversations((prev) => [conv, ...prev])
+      navigate(`/chat/${conv.id}`)
+      onClose()
+    } catch {
+      // Non-fatal — sidebar stays open and user can retry.
+    }
+  }
 
   async function handleLogout() {
     setLogoutError('')
@@ -84,10 +105,54 @@ export default function Sidebar({ isOpen, onClose }) {
           </span>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 p-3">
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
           {navItems.map((item) => (
             <NavItem key={item.to} {...item} onClick={onClose} />
           ))}
+
+          {/* Conversation list */}
+          <div className="mt-4 border-t border-mirror-border-subtle pt-3">
+            <div className="mb-1.5 flex items-center justify-between px-2">
+              <span className="text-xs font-medium uppercase tracking-wider text-mirror-subtle">
+                Chats
+              </span>
+              <button
+                type="button"
+                onClick={handleNewChat}
+                title="New chat"
+                className="rounded-md p-1 text-mirror-subtle transition-colors hover:bg-mirror-elevated hover:text-mirror-text"
+              >
+                <svg
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-0.5">
+              {conversations.map((conv) => (
+                <NavLink
+                  key={conv.id}
+                  to={`/chat/${conv.id}`}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `block truncate rounded-lg px-3 py-2 text-sm transition-colors ${
+                      isActive
+                        ? 'bg-mirror-accent/15 text-mirror-accent'
+                        : 'text-mirror-muted hover:bg-mirror-elevated hover:text-mirror-text'
+                    }`
+                  }
+                >
+                  {conv.title}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         </nav>
 
         <div className="space-y-3 border-t border-mirror-border-subtle p-3">

@@ -40,6 +40,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.SETUP, element: <Setup /> },
           { path: ROUTES.DASHBOARD, element: <Dashboard /> },
           { path: ROUTES.CHAT, element: <Chat /> },
+          { path: ROUTES.CHAT_CONVERSATION, element: <Chat /> },
           { path: ROUTES.JOURNAL, element: <Journal /> },
           { path: ROUTES.MEMORIES, element: <Memories /> },
         ],

@@ -5,6 +5,7 @@ export const ROUTES = {
   SETUP: '/setup',
   DASHBOARD: '/dashboard',
   CHAT: '/chat',
+  CHAT_CONVERSATION: '/chat/:conversationId',
   JOURNAL: '/journal',
   MEMORIES: '/memories',
 }

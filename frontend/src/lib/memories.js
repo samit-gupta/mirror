@@ -24,7 +24,7 @@ export async function saveMemory({
 export async function getMemories(userId, { limit = 20 } = {}) {
   const { data, error } = await supabase
     .from('memories')
-    .select('memory_type, content, importance')
+    .select('id, memory_type, content, importance, created_at')
     .eq('user_id', userId)
     .order('importance', { ascending: false })
     .order('created_at', { ascending: false })

@@ -12,6 +12,7 @@ import Setup from '../pages/Setup'
 import Dashboard from '../pages/Dashboard'
 import Chat from '../pages/Chat'
 import Journal from '../pages/Journal'
+import Memories from '../pages/Memories'
 
 export const router = createBrowserRouter([
   {
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.DASHBOARD, element: <Dashboard /> },
           { path: ROUTES.CHAT, element: <Chat /> },
           { path: ROUTES.JOURNAL, element: <Journal /> },
+          { path: ROUTES.MEMORIES, element: <Memories /> },
         ],
       },
     ],

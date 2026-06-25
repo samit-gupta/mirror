@@ -10,6 +10,7 @@ const navItems = [
   { to: ROUTES.CHAT, label: 'Chat', icon: '◎' },
   { to: ROUTES.JOURNAL, label: 'Journal', icon: '◇' },
   { to: ROUTES.MEMORIES, label: 'Memory Vault', icon: '❂' },
+  { to: ROUTES.GOALS, label: 'Goals', icon: '✦' },
   { to: ROUTES.SETUP, label: 'Setup', icon: '⚙' },
 ]
 

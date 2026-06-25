@@ -7,5 +7,6 @@ export const ROUTES = {
   CHAT: '/chat',
   JOURNAL: '/journal',
   MEMORIES: '/memories',
+  GOALS: '/goals',
 }
 

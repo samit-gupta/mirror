@@ -13,6 +13,7 @@ import Dashboard from '../pages/Dashboard'
 import Chat from '../pages/Chat'
 import Journal from '../pages/Journal'
 import Memories from '../pages/Memories'
+import Goals from '../pages/Goals'
 
 export const router = createBrowserRouter([
   {
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.CHAT_CONVERSATION, element: <Chat /> },
           { path: ROUTES.JOURNAL, element: <Journal /> },
           { path: ROUTES.MEMORIES, element: <Memories /> },
+          { path: ROUTES.GOALS, element: <Goals /> },
         ],
       },
     ],

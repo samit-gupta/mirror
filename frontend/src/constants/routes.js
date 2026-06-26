@@ -8,5 +8,6 @@ export const ROUTES = {
   CHAT_CONVERSATION: '/chat/:conversationId',
   JOURNAL: '/journal',
   MEMORIES: '/memories',
+  GOALS: '/goals',
 }
 

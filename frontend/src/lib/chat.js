@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { generateFutureSelfReply } from './gemini'
 import { getMemories } from './memories'
+import { rankMemories } from './memoryRanking'
 import { getProfile } from './profiles'
 
 export function formatMessageTime(isoString) {
@@ -118,9 +119,11 @@ export async function sendChatMessage({ userId, conversationId, content }) {
     content: trimmed,
   })
 
+  const rankedMemories = rankMemories(memories, trimmed)
+
   const aiContent = await generateFutureSelfReply({
     profile,
-    memories,
+    memories: rankedMemories,
     history,
     userMessage: trimmed,
     userId,

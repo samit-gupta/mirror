@@ -11,6 +11,7 @@ import {
   MOOD_COLORS,
   updateJournal,
 } from '../lib/journal'
+import { extractAndStoreJournalMemories } from '../lib/journalMemory'
 
 const inputClassName =
   'mt-1.5 w-full rounded-lg border border-mirror-border bg-mirror-elevated px-4 py-2.5 text-sm text-mirror-text placeholder:text-mirror-subtle focus:border-mirror-accent focus:outline-none focus:ring-1 focus:ring-mirror-accent disabled:cursor-not-allowed disabled:opacity-60'
@@ -124,6 +125,10 @@ export default function Journal() {
       await updateJournal(selectedId, user.id, draft)
       await loadEntries()
       setSuccess('Entry saved.')
+
+      // Fire-and-forget: extract long-term insights in the background.
+      // Not awaited — extraction never blocks or interrupts the save UX.
+      extractAndStoreJournalMemories(user.id, draft.content)
     } catch (err) {
       setError(getAuthErrorMessage(err))
     } finally {

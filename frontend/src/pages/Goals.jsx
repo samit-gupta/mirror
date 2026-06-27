@@ -1,34 +1,21 @@
 import { useEffect, useState } from 'react'
 import AuthAlert from '../components/auth/AuthAlert'
-
-const initialMockGoals = [
-  {
-    id: '1',
-    title: 'Become fit',
-    category: 'Health',
-    progress: 40,
-    status: 'In Progress',
-  },
-  {
-    id: '2',
-    title: 'Learn AI Systems',
-    category: 'Career',
-    progress: 75,
-    status: 'In Progress',
-  },
-  {
-    id: '3',
-    title: 'Build financial freedom',
-    category: 'Finance',
-    progress: 10,
-    status: 'In Progress',
-  },
-]
+import { useAuth } from '../contexts/AuthContext'
+import { getAuthErrorMessage } from '../lib/auth'
+import { createGoal, deleteGoal, getGoals, updateGoal } from '../lib/goals'
 
 const inputClassName =
   'mt-1.5 w-full rounded-lg border border-mirror-border bg-mirror-elevated px-4 py-2 text-sm text-mirror-text placeholder:text-mirror-subtle focus:border-mirror-accent focus:outline-none focus:ring-1 focus:ring-mirror-accent disabled:cursor-not-allowed disabled:opacity-60'
 
+const STATUS_LABELS = {
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  paused: 'Paused',
+}
+
 export default function Goals() {
+  const { user } = useAuth()
+
   const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -44,24 +31,44 @@ export default function Goals() {
   const [editingId, setEditingId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
   const [editCategory, setEditCategory] = useState('')
-  const [editStatus, setEditStatus] = useState('')
+  const [editStatus, setEditStatus] = useState('in_progress')
 
   useEffect(() => {
-    // Simulate API loading
-    const timer = setTimeout(() => {
-      setGoals(initialMockGoals)
-      setLoading(false)
-    }, 600)
+    if (!user) return
+    let cancelled = false
 
-    return () => clearTimeout(timer)
-  }, [])
+    async function init() {
+      setLoading(true)
+      setError('')
+      try {
+        const data = await getGoals(user.id)
+        if (!cancelled) {
+          setGoals(data)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(getAuthErrorMessage(err))
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    init()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   // Derived stats
   const totalGoals = goals.length
-  const completedGoals = goals.filter((g) => g.status === 'Completed').length
-  const inProgressGoals = goals.filter((g) => g.status === 'In Progress').length
+  const completedGoals = goals.filter((g) => g.status === 'completed').length
+  const inProgressGoals = goals.filter((g) => g.status === 'in_progress').length
 
-  function handleAddGoal(e) {
+  async function handleAddGoal(e) {
     e.preventDefault()
     setError('')
     setSuccess('')
@@ -71,33 +78,38 @@ export default function Goals() {
       return
     }
 
-    const newGoal = {
-      id: Date.now().toString(),
-      title: newTitle.trim(),
-      category: newCategory,
-      progress: Math.min(Math.max(Number(newProgress) || 0, 0), 100),
-      status: Number(newProgress) >= 100 ? 'Completed' : 'In Progress',
-    }
+    try {
+      const newProgressVal = Math.min(Math.max(Number(newProgress) || 0, 0), 100)
+      const newGoal = await createGoal(user.id, {
+        title: newTitle.trim(),
+        category: newCategory,
+        progress: newProgressVal,
+        status: newProgressVal >= 100 ? 'completed' : 'in_progress',
+      })
 
-    setGoals((prev) => [newGoal, ...prev])
-    setNewTitle('')
-    setNewProgress(0)
-    setShowAddForm(false)
-    setSuccess('Goal successfully added!')
+      setGoals((prev) => [newGoal, ...prev])
+      setNewTitle('')
+      setNewProgress(0)
+      setShowAddForm(false)
+      setSuccess('Goal successfully added!')
+    } catch (err) {
+      setError(getAuthErrorMessage(err))
+    }
   }
 
   function handleUpdateProgress(id, value) {
     const nextProgress = Math.min(Math.max(Number(value) || 0, 0), 100)
+
+    // Update state locally first for immediate slider feedback
     setGoals((prev) =>
       prev.map((g) => {
         if (g.id === id) {
           let nextStatus = g.status
           if (nextProgress >= 100) {
-            nextStatus = 'Completed'
-          } else if (g.status === 'Completed' && nextProgress < 100) {
-            nextStatus = 'In Progress'
+            nextStatus = 'completed'
+          } else if (g.status === 'completed' && nextProgress < 100) {
+            nextStatus = 'in_progress'
           }
-          // Note: If the status is 'Paused', it remains 'Paused' when progress changes below 100.
           return {
             ...g,
             progress: nextProgress,
@@ -107,14 +119,41 @@ export default function Goals() {
         return g
       })
     )
+
+    // Fire update to Supabase in background
+    const targetGoal = goals.find((g) => g.id === id)
+    if (targetGoal) {
+      let nextStatus = targetGoal.status
+      if (nextProgress >= 100) {
+        nextStatus = 'completed'
+      } else if (targetGoal.status === 'completed' && nextProgress < 100) {
+        nextStatus = 'in_progress'
+      }
+
+      updateGoal(id, user.id, {
+        title: targetGoal.title,
+        category: targetGoal.category,
+        progress: nextProgress,
+        status: nextStatus,
+      }).catch((err) => {
+        setError('Failed to save progress update to server: ' + getAuthErrorMessage(err))
+      })
+    }
   }
 
-  function handleDeleteGoal(id) {
-    if (editingId === id) {
-      setEditingId(null)
+  async function handleDeleteGoal(id) {
+    setError('')
+    setSuccess('')
+    try {
+      await deleteGoal(id, user.id)
+      if (editingId === id) {
+        setEditingId(null)
+      }
+      setGoals((prev) => prev.filter((g) => g.id !== id))
+      setSuccess('Goal removed.')
+    } catch (err) {
+      setError(getAuthErrorMessage(err))
     }
-    setGoals((prev) => prev.filter((g) => g.id !== id))
-    setSuccess('Goal removed.')
   }
 
   function startEdit(goal) {
@@ -126,7 +165,7 @@ export default function Goals() {
     setEditStatus(goal.status)
   }
 
-  function handleSaveEdit(e, id) {
+  async function handleSaveEdit(e, id) {
     e.preventDefault()
     setError('')
     setSuccess('')
@@ -136,36 +175,36 @@ export default function Goals() {
       return
     }
 
-    setGoals((prev) =>
-      prev.map((g) => {
-        if (g.id === id) {
-          let finalProgress = g.progress
-          let finalStatus = editStatus
+    const targetGoal = goals.find((g) => g.id === id)
+    if (!targetGoal) return
 
-          // Automatic status/progress syncing
-          if (editStatus === 'Completed') {
-            finalProgress = 100
-          } else if (g.status === 'Completed' && editStatus !== 'Completed') {
-            // Changed away from completed
-            finalProgress = 99
-          } else if (editStatus === 'In Progress' && finalProgress >= 100) {
-            finalProgress = 99
-          }
+    let finalProgress = targetGoal.progress
+    let finalStatus = editStatus
 
-          return {
-            ...g,
-            title: editTitle.trim(),
-            category: editCategory,
-            status: finalStatus,
-            progress: finalProgress,
-          }
-        }
-        return g
+    // Automatic status/progress syncing
+    if (editStatus === 'completed') {
+      finalProgress = 100
+    } else if (targetGoal.status === 'completed' && editStatus !== 'completed') {
+      // Changed away from completed
+      finalProgress = 99
+    } else if (editStatus === 'in_progress' && finalProgress >= 100) {
+      finalProgress = 99
+    }
+
+    try {
+      const updated = await updateGoal(id, user.id, {
+        title: editTitle.trim(),
+        category: editCategory,
+        status: finalStatus,
+        progress: finalProgress,
       })
-    )
 
-    setEditingId(null)
-    setSuccess('Goal updated successfully!')
+      setGoals((prev) => prev.map((g) => (g.id === id ? updated : g)))
+      setEditingId(null)
+      setSuccess('Goal updated successfully!')
+    } catch (err) {
+      setError(getAuthErrorMessage(err))
+    }
   }
 
   return (
@@ -338,9 +377,9 @@ export default function Goals() {
                           onChange={(e) => setEditStatus(e.target.value)}
                           className={inputClassName}
                         >
-                          <option value="In Progress">In Progress</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Paused">Paused</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                          <option value="paused">Paused</option>
                         </select>
                       </div>
                     </div>
@@ -368,14 +407,14 @@ export default function Goals() {
                       </span>
                       <span
                         className={`text-xs font-medium ${
-                          goal.status === 'Completed'
+                          goal.status === 'completed'
                             ? 'text-emerald-400'
-                            : goal.status === 'Paused'
+                            : goal.status === 'paused'
                             ? 'text-amber-400'
                             : 'text-mirror-muted'
                         }`}
                       >
-                        {goal.status}
+                        {STATUS_LABELS[goal.status] ?? goal.status}
                       </span>
                     </div>
 

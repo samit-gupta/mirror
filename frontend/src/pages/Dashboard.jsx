@@ -10,6 +10,7 @@ import {
   getConversationCount,
   getRecentInsights,
 } from '../lib/chat'
+import { getGoalSummary } from '../lib/goals'
 import { getJournalCount } from '../lib/journal'
 import { getProfile } from '../lib/profiles'
 
@@ -31,6 +32,12 @@ export default function Dashboard() {
     journals: 0,
     activeDays: 0,
   })
+  const [goalStats, setGoalStats] = useState({
+    total: 0,
+    completed: 0,
+    inProgress: 0,
+    topGoals: [],
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -44,14 +51,21 @@ export default function Dashboard() {
       setError('')
 
       try {
-        const [userProfile, recentInsights, conversationCount, journalCount, activeDays] =
-          await Promise.all([
-            getProfile(user.id),
-            getRecentInsights(user.id),
-            getConversationCount(user.id),
-            getJournalCount(user.id),
-            getActiveDaysCount(user.id),
-          ])
+        const [
+          userProfile,
+          recentInsights,
+          conversationCount,
+          journalCount,
+          activeDays,
+          goalSummary,
+        ] = await Promise.all([
+          getProfile(user.id),
+          getRecentInsights(user.id),
+          getConversationCount(user.id),
+          getJournalCount(user.id),
+          getActiveDaysCount(user.id),
+          getGoalSummary(user.id),
+        ])
 
         if (cancelled) return
 
@@ -62,6 +76,7 @@ export default function Dashboard() {
           journals: journalCount,
           activeDays,
         })
+        setGoalStats(goalSummary)
       } catch (err) {
         if (!cancelled) {
           setError(getAuthErrorMessage(err))
@@ -167,11 +182,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <section className="mt-10 grid gap-4 sm:grid-cols-3">
+      {/* Activity Stats */}
+      <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: 'Conversations', value: stats.conversations },
           { label: 'Journal entries', value: stats.journals },
           { label: 'Days active', value: stats.activeDays },
+          { label: 'Goals tracked', value: goalStats.total },
         ].map((stat) => (
           <div
             key={stat.label}
@@ -181,6 +198,164 @@ export default function Dashboard() {
             <p className="text-sm text-mirror-muted">{stat.label}</p>
           </div>
         ))}
+      </section>
+
+      {/* Goals Overview */}
+      <section className="mt-8">
+
+        {/* Section header */}
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-mirror-text">Goals Overview</h2>
+          <Link
+            to={ROUTES.GOALS}
+            className="text-sm text-mirror-accent transition-colors hover:text-mirror-accent-hover"
+          >
+            View all →
+          </Link>
+        </div>
+
+        {/* Status summary cards */}
+        {goalStats.total === 0 ? (
+          <div className="rounded-xl border border-dashed border-mirror-border bg-mirror-surface/50 px-5 py-10 text-center">
+            <p className="text-sm font-medium text-mirror-text">No goals tracked yet</p>
+            <p className="mt-1 text-sm text-mirror-muted">
+              Set your first goal and start tracking your progress.
+            </p>
+            <Link
+              to={ROUTES.GOALS}
+              className="mt-5 inline-block rounded-lg bg-mirror-accent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-mirror-accent-hover"
+            >
+              Create a goal
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* Three summary stat cards + optional paused badge */}
+            <div className="mb-6 grid grid-cols-3 gap-3">
+              {/* Total */}
+              <div className="rounded-xl border border-mirror-border bg-mirror-surface p-4">
+                <p className="text-2xl font-bold text-mirror-text">{goalStats.total}</p>
+                <p className="mt-0.5 text-xs text-mirror-muted">Total Goals</p>
+              </div>
+
+              {/* Completed */}
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                <p className="text-2xl font-bold text-emerald-400">{goalStats.completed}</p>
+                <p className="mt-0.5 text-xs text-mirror-muted">Completed</p>
+              </div>
+
+              {/* In Progress */}
+              <div className="rounded-xl border border-mirror-accent/20 bg-mirror-accent/5 p-4">
+                <p className="text-2xl font-bold text-mirror-accent">{goalStats.inProgress}</p>
+                <p className="mt-0.5 text-xs text-mirror-muted">In Progress</p>
+              </div>
+            </div>
+
+            {/* Paused badge — shown only when paused goals exist */}
+            {goalStats.total - goalStats.completed - goalStats.inProgress > 0 && (
+              <div className="mb-5 flex items-center gap-2">
+                <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-400">
+                  ⏸ {goalStats.total - goalStats.completed - goalStats.inProgress} paused
+                </span>
+              </div>
+            )}
+
+            {/* Active Goals subsection */}
+            <div className="mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-medium text-mirror-text">Active Goals</h3>
+              <span className="rounded-full bg-mirror-accent/15 px-2 py-0.5 text-xs font-medium text-mirror-accent">
+                {goalStats.inProgress}
+              </span>
+            </div>
+
+            {goalStats.topGoals.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-mirror-border bg-mirror-surface/50 px-5 py-8 text-center">
+                {goalStats.completed > 0 ? (
+                  <>
+                    <p className="text-lg">🎉</p>
+                    <p className="mt-2 text-sm font-medium text-mirror-text">All goals completed!</p>
+                    <p className="mt-1 text-sm text-mirror-muted">
+                      Set a new goal to keep the momentum going.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-mirror-muted">No active goals right now.</p>
+                  </>
+                )}
+                <Link
+                  to={ROUTES.GOALS}
+                  className="mt-4 inline-block text-sm text-mirror-accent hover:text-mirror-accent-hover"
+                >
+                  Go to Goals →
+                </Link>
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {goalStats.topGoals.map((goal) => (
+                  <li
+                    key={goal.id}
+                    className="rounded-xl border border-mirror-border bg-mirror-surface px-5 py-4 transition-colors hover:border-mirror-accent/20"
+                  >
+                    {/* Row 1: title + category badge */}
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <span className="flex-1 text-sm font-medium leading-snug text-mirror-text">
+                        {goal.title}
+                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="rounded-full bg-mirror-accent/15 px-2.5 py-0.5 text-xs font-medium text-mirror-accent">
+                          {goal.category}
+                        </span>
+                        <span className="rounded-full bg-mirror-accent/10 px-2.5 py-0.5 text-xs font-medium text-mirror-accent">
+                          In Progress
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Row 2: progress bar + percentage */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-mirror-elevated">
+                        <div
+                          className="h-full rounded-full bg-mirror-accent transition-all duration-500"
+                          style={{ width: `${goal.progress}%` }}
+                        />
+                      </div>
+                      <span className="w-9 shrink-0 text-right text-xs font-medium text-mirror-muted">
+                        {goal.progress}%
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Recently Completed subsection — renders only when completed goal objects are available */}
+            {Array.isArray(goalStats.recentlyCompleted) && goalStats.recentlyCompleted.length > 0 && (
+              <div className="mt-6">
+                <h3 className="mb-3 text-sm font-medium text-mirror-text">Recently Completed</h3>
+                <ul className="space-y-2">
+                  {goalStats.recentlyCompleted.slice(0, 3).map((goal) => (
+                    <li
+                      key={goal.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="shrink-0 text-emerald-400 text-sm">✓</span>
+                        <span className="truncate text-sm text-mirror-text">{goal.title}</span>
+                        <span className="hidden shrink-0 rounded-full bg-mirror-accent/10 px-2 py-0.5 text-xs text-mirror-muted sm:inline">
+                          {goal.category}
+                        </span>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
+                        Completed
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
       </section>
     </div>
   )

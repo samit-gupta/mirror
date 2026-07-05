@@ -5,7 +5,129 @@ import { ROUTES } from '../constants/routes'
 import { useAuth } from '../contexts/AuthContext'
 import { getAuthErrorMessage } from '../lib/auth'
 import { formatJournalDate } from '../lib/journal'
-import { getMemories } from '../lib/memories'
+import { deleteMemory, getMemories, updateMemory } from '../lib/memories'
+
+function MemoryCard({ memory, user, onRefresh }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState(memory.content)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    if (!editContent.trim() || editContent.trim() === memory.content) {
+      setIsEditing(false)
+      return
+    }
+
+    setIsSaving(true)
+    setError('')
+    try {
+      await updateMemory(memory.id, user.id, editContent.trim())
+      setIsEditing(false)
+      onRefresh()
+    } catch (err) {
+      setError(getAuthErrorMessage(err))
+      setIsSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm('Are you sure you want to delete this memory?')) {
+      return
+    }
+
+    setIsDeleting(true)
+    setError('')
+    try {
+      await deleteMemory(memory.id, user.id)
+      onRefresh()
+    } catch (err) {
+      setError(getAuthErrorMessage(err))
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <article className="rounded-xl border border-mirror-border bg-mirror-surface p-6 transition-all duration-200 hover:border-mirror-accent/40 hover:shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="rounded-full bg-mirror-accent/15 px-2.5 py-0.5 text-xs font-medium text-mirror-accent capitalize">
+          {memory.memory_type === 'goal' ? 'Goal' : memory.memory_type}
+        </span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center border-r border-mirror-border-subtle pr-4">
+            <span className="flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-500">
+              <span aria-hidden="true" className="text-[10px]">⭐</span>
+              {memory.importance}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <button
+                  onClick={() => {
+                    setIsEditing(false)
+                    setEditContent(memory.content)
+                    setError('')
+                  }}
+                  disabled={isSaving}
+                  className="rounded-md px-3 py-1.5 text-xs font-medium text-mirror-muted transition-colors hover:bg-mirror-elevated hover:text-mirror-text disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="rounded-md bg-mirror-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-mirror-accent-hover disabled:opacity-50"
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  disabled={isDeleting}
+                  className="rounded-md border border-mirror-accent/30 px-3 py-1.5 text-xs font-medium text-mirror-accent transition-colors hover:bg-mirror-accent/10 disabled:opacity-50"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="rounded-md border border-mirror-border px-3 py-1.5 text-xs font-medium text-mirror-subtle transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {error && <div className="mt-4"><AuthAlert variant="error" message={error} /></div>}
+
+      {isEditing ? (
+        <textarea
+          value={editContent}
+          onChange={(e) => setEditContent(e.target.value)}
+          disabled={isSaving}
+          className="mt-4 w-full rounded-lg border border-mirror-border bg-mirror-elevated p-3 text-sm text-mirror-text focus:border-mirror-accent focus:outline-none focus:ring-1 focus:ring-mirror-accent disabled:opacity-50"
+          rows={3}
+        />
+      ) : (
+        <p className="mt-4 text-sm leading-relaxed text-mirror-text sm:text-base">
+          {memory.content}
+        </p>
+      )}
+      <div className="mt-5 border-t border-mirror-border-subtle pt-4 text-right">
+        <time className="text-[11px] tracking-wide text-mirror-muted/60" dateTime={memory.created_at}>
+          Captured on {formatJournalDate(memory.created_at)}
+        </time>
+      </div>
+    </article>
+  )
+}
 
 export default function Memories() {
   const { user } = useAuth()
@@ -105,30 +227,12 @@ export default function Memories() {
       ) : (
         <div className="space-y-4">
           {memories.map((memory) => (
-            <article
+            <MemoryCard
               key={memory.id}
-              className="rounded-xl border border-mirror-border bg-mirror-surface p-5 transition-colors hover:border-mirror-accent/30"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="rounded-full bg-mirror-accent/15 px-2.5 py-0.5 text-xs font-medium text-mirror-accent capitalize">
-                  {memory.memory_type === 'goal' ? 'Goal' : memory.memory_type}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-mirror-subtle">Importance</span>
-                  <span className="rounded bg-mirror-elevated px-1.5 py-0.5 text-xs font-semibold text-mirror-muted">
-                    {memory.importance}
-                  </span>
-                </div>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-mirror-text sm:text-base">
-                {memory.content}
-              </p>
-              <div className="mt-4 border-t border-mirror-border-subtle pt-3 text-right">
-                <time className="text-xs text-mirror-subtle" dateTime={memory.created_at}>
-                  Captured on {formatJournalDate(memory.created_at)}
-                </time>
-              </div>
-            </article>
+              memory={memory}
+              user={user}
+              onRefresh={loadMemories}
+            />
           ))}
         </div>
       )}

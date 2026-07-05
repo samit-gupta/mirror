@@ -125,3 +125,25 @@ export async function getJournalCount(userId) {
 
   return count ?? 0
 }
+
+export async function getExtractionHash(journalId, userId) {
+  const { data, error } = await supabase
+    .from('journals')
+    .select('last_processed_content_hash')
+    .eq('id', journalId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) throw error
+  return data?.last_processed_content_hash ?? null
+}
+
+export async function setExtractionHash(journalId, userId, hash) {
+  const { error } = await supabase
+    .from('journals')
+    .update({ last_processed_content_hash: hash })
+    .eq('id', journalId)
+    .eq('user_id', userId)
+
+  if (error) throw error
+}

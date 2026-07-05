@@ -128,7 +128,7 @@ export default function Journal() {
 
       // Fire-and-forget: extract long-term insights in the background.
       // Not awaited — extraction never blocks or interrupts the save UX.
-      extractAndStoreJournalMemories(user.id, draft.content)
+      extractAndStoreJournalMemories(user.id, selectedId, draft.content)
     } catch (err) {
       setError(getAuthErrorMessage(err))
     } finally {

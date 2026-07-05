@@ -36,3 +36,29 @@ export async function getMemories(userId, { limit = 20 } = {}) {
 
   return data ?? []
 }
+
+export async function updateMemory(memoryId, userId, content) {
+  const { error } = await supabase
+    .from('memories')
+    .update({ content })
+    .eq('id', memoryId)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('MEMORY UPDATE ERROR:', error)
+    throw error
+  }
+}
+
+export async function deleteMemory(memoryId, userId) {
+  const { error } = await supabase
+    .from('memories')
+    .delete()
+    .eq('id', memoryId)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('MEMORY DELETE ERROR:', error)
+    throw error
+  }
+}

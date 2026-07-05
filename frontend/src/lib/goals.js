@@ -71,3 +71,37 @@ export async function deleteGoal(goalId, userId) {
     throw error
   }
 }
+
+/**
+ * Lightweight helper for the Dashboard Analytics panel.
+ * Fetches only the minimal columns needed to compute goal statistics
+ * and surface the top in-progress goals — avoids a full getGoals() payload.
+ *
+ * Returns:
+ *   { total, completed, inProgress, topGoals }
+ *
+ * topGoals — up to 3 in-progress goals ordered by created_at desc.
+ */
+export async function getGoalSummary(userId) {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('id, title, category, progress, status, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('GOAL SUMMARY ERROR:', error)
+    throw error
+  }
+
+  const rows = data ?? []
+  const total = rows.length
+  const completed = rows.filter((g) => g.status === 'completed').length
+  const inProgress = rows.filter((g) => g.status === 'in_progress').length
+
+  const topGoals = rows
+    .filter((g) => g.status === 'in_progress')
+    .slice(0, 3)
+
+  return { total, completed, inProgress, topGoals }
+}

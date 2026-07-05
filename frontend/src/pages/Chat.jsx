@@ -112,24 +112,29 @@ export default function Chat() {
       createdAt: new Date().toISOString(),
     }
   
-    // show user message instantly
+    // Show the user's message immediately as an optimistic update.
     setMessages((prev) => [...prev, tempUserMessage])
   
     try {
-      const { userMessage, assistantMessage } = await sendChatMessage({
+      const { assistantMessage } = await sendChatMessage({
         userId: user.id,
         conversationId,
         content: trimmed,
+        // Fires as soon as the user message is persisted — before the AI call.
+        // Replaces "Sending..." with the real timestamp so the message looks sent.
+        onUserMessageSaved: (savedMessage) => {
+          setMessages((prev) => {
+            const withoutTemp = prev.filter((msg) => msg.id !== tempId)
+            return [...withoutTemp, mapMessageForUi(savedMessage)]
+          })
+        },
       })
   
+      // Append the AI reply. The temp message was already replaced by the callback above,
+      // but filter it out defensively in case the callback did not fire.
       setMessages((prev) => {
         const withoutTemp = prev.filter((msg) => msg.id !== tempId)
-  
-        return [
-          ...withoutTemp,
-          mapMessageForUi(userMessage),
-          mapMessageForUi(assistantMessage),
-        ]
+        return [...withoutTemp, mapMessageForUi(assistantMessage)]
       })
     } catch (err) {
       setMessages((prev) =>
@@ -143,6 +148,7 @@ export default function Chat() {
       setSending(false)
     }
   }
+
 
   const futureAge = profile?.future_age
   const yearsAhead =

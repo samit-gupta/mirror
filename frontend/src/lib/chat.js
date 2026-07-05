@@ -94,7 +94,7 @@ export async function saveMessage({ conversationId, userId, role, content }) {
   return data
 }
 
-export async function sendChatMessage({ userId, conversationId, content }) {
+export async function sendChatMessage({ userId, conversationId, content, onUserMessageSaved }) {
   const trimmed = content.trim()
 
   if (!trimmed) {
@@ -118,6 +118,10 @@ export async function sendChatMessage({ userId, conversationId, content }) {
     role: 'user',
     content: trimmed,
   })
+
+  // Notify the caller that the user message has been persisted.
+  // Allows the UI to update the message status before the AI call begins.
+  onUserMessageSaved?.(userMessage)
 
   const rankedMemories = rankMemories(memories, trimmed)
 

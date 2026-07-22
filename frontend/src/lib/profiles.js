@@ -176,7 +176,6 @@ export function normalizeProfileForFutureSelf(profile) {
     currentAge: profile.current_age,
     futureAge: profile.future_age,
     goals: parsed.goals,
-    dreamSalary: '',
     healthGoal: parsed.healthGoal,
     lifeVision: parsed.lifeVision,
   }

@@ -77,6 +77,27 @@ Last Updated: 2026-07-22
 
 ---
 
+## Chapter 2 — Identity & Presence
+
+### Status
+✅ Complete
+
+### Implementation
+
+- Future Self identity is now implicit rather than repeatedly declared.
+- Removed scripted identity introductions.
+- Identity emerges naturally through perspective and experience.
+- Identity explanations occur only when directly challenged.
+- Replaced purpose-driven language with natural conversation.
+- Reduced repetitive identity statements.
+- Encouraged hindsight-based language over self-description.
+
+### Files
+
+- frontend/src/lib/gemini.js
+
+---
+
 ## Chapter 3 — Conversation Philosophy 🟢
 
 ### Files
@@ -90,6 +111,62 @@ Last Updated: 2026-07-22
 
 ### Verified
 - ✅ All prompt cleanup tests passed
+
+---
+
+## Chapter 6 — Core Principles
+
+### Status
+✅ Complete
+
+### Implementation
+
+- Added lightweight constitutional principle framework.
+- Prioritizes trust, safety, understanding, honesty, respect, and growth.
+- Added crisis guidance.
+- Principles guide responses without becoming verbose.
+
+### Files
+
+- frontend/src/lib/gemini.js
+
+---
+
+## Chapter 10 — Integrity & Boundaries
+
+### Status
+✅ Complete
+
+### Implementation
+
+- Added anti-manipulation rules.
+- Added anti-dependency guidance.
+- Protects user autonomy and dignity.
+- Prevents false certainty and guaranteed outcomes.
+- Preserves Future Self experience without deceptive identity claims.
+
+### Files
+
+- frontend/src/lib/gemini.js
+
+---
+
+## Chapter 11 — Trust & Honesty
+
+### Status
+✅ Complete
+
+### Implementation
+
+- Tone adapts while principles remain constant.
+- Future Self admits mistakes naturally.
+- Protects user confidence.
+- Avoids overpromising.
+- Strengthened honesty and uncertainty handling.
+
+### Files
+
+- frontend/src/lib/gemini.js
 
 ---
 
@@ -352,7 +429,7 @@ Last Updated: 2026-07-22
 - Emotional state detection.
 - Response strategy selection.
 
-
+---
 
 ## Chapter 20 — Prompt Translation 🟡
 
@@ -424,3 +501,37 @@ No regressions observed.
 2. Chapter 19 — Mirror Response Engine
 3. Chapter 8 — Relationship Evolution
 4. Chapter 21 — Memory Orchestration
+
+
+
+## Phase 3A — Reasoning Foundation
+
+Status: ✅ Complete
+
+Implemented:
+- Chapter 5 — Understanding Framework
+- Chapter 14 — Guidance Framework
+- Chapter 16 — Growth Framework
+
+Files:
+- frontend/src/lib/gemini.js
+
+Notes:
+- Added pre-response reasoning.
+- Added feelings-before-solutions.
+- Added understand-before-advising.
+- Added options instead of commands.
+- Added confidence-aware guidance.
+
+## Chapter 19 Notes
+
+### Future Enhancement
+Response Calibration Layer
+
+Before generating a response, Future Self should determine:
+- Interaction type
+- Response depth
+- Appropriate tone
+
+Goal:
+Avoid over-analyzing simple conversations and match response length to the user's actual need.

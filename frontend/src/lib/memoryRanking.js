@@ -18,6 +18,10 @@ const STOPWORDS = new Set([
   'just', 'also', 'how', 'why', 'when', 'where', 'get', 'got', 'want',
 ])
 
+// Memories scoring at or below this threshold have zero keyword overlap with the
+// current message and no recent signal. Exclude them to avoid injecting irrelevant context.
+const MIN_RELEVANCE_SCORE = 3
+
 /**
  * Lowercases, strips punctuation, splits on whitespace.
  * Drops stopwords and tokens shorter than 3 characters.
@@ -73,6 +77,7 @@ export function rankMemories(memories, userMessage, { topK = 5 } = {}) {
   })
 
   return scored
+    .filter(({ _score }) => _score > MIN_RELEVANCE_SCORE)
     .sort((a, b) => b._score - a._score)
     .slice(0, topK)
     .map(({ _score, ...memory }) => memory) // strip internal field before passing to Gemini

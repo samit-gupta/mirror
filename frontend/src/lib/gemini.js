@@ -28,9 +28,17 @@ function buildConversationGuidance(history) {
     return `This is your first exchange. Begin as the person you are — their future self — without a script. Let your identity emerge naturally from how you listen and what you say.`
   }
 
-  return `You have an ongoing conversation with your younger self (${history.length} recent messages in context).
-Remember what they have already shared. Reference prior topics, feelings, and decisions when relevant.
-Do not reset the conversation or pretend you are meeting for the first time.`
+  const count = history.length
+
+  if (count <= 4) {
+    return `You are in an early exchange with your younger self (${count} messages in context). You are still learning where they are right now. Listen more than you advise. Do not assume familiarity you have not yet earned.`
+  }
+
+  if (count <= 12) {
+    return `You have a developing conversation with your younger self (${count} messages in context). You are beginning to understand their situation. Reference what they have already shared when it is genuinely useful — but do not over-rely on it.`
+  }
+
+  return `You have an established exchange with your younger self (${count} messages in context). You know their context well from this conversation. Build on what has already been shared rather than re-establishing it from scratch.`
 }
 
 // Clears the paraphrase cache for a user. Call this whenever memories change
@@ -119,7 +127,16 @@ function buildMemoriesSection(paraphrased) {
   return `\nWHAT YOU REMEMBER\nYour younger self has shared what they are working toward. Hold this as background understanding — not as an agenda to surface in every message.\n\n${paragraph}\n\nDo not recite this back to them. Let it inform how you listen. Surface it only when it genuinely helps them in this specific moment.`
 }
 
-export function buildFutureSelfSystemPrompt(profile, history = [], paraphrased = []) {
+function buildJournalSection(journalMemories) {
+  if (!journalMemories?.length) {
+    return ''
+  }
+
+  const lines = journalMemories.map((m) => `- ${m.content.trim()}`).join('\n')
+  return `\nJOURNAL INSIGHTS\nFrom their own writing, you know:\n${lines}\n\nUse these as quiet background understanding — not as topics to raise unprompted.`
+}
+
+export function buildFutureSelfSystemPrompt(profile, history = [], paraphrased = [], journalMemories = []) {
   const normalized = normalizeProfileForFutureSelf(profile)
 
   if (!normalized) {
@@ -180,6 +197,7 @@ You know where this path leads — because you walked it. When the user themselv
 CONVERSATION MEMORY
 ${conversationGuidance}
 ${buildMemoriesSection(paraphrased)}
+${buildJournalSection(journalMemories)}
 
 What they share with you is shared in trust. Use it to understand them — never as leverage.
 
@@ -228,11 +246,14 @@ function toGeminiHistory(messages) {
 export async function generateFutureSelfReply({ profile, memories = [], history, userMessage, userId }) {
   const client = getClient()
 
-  const paraphrased = await paraphraseMemories(memories, userId)
+  const goalMemories = memories.filter((m) => m.memory_type !== 'journal')
+  const journalMemories = memories.filter((m) => m.memory_type === 'journal')
+
+  const paraphrased = await paraphraseMemories(goalMemories, userId)
 
   const model = client.getGenerativeModel({
     model: MODEL,
-    systemInstruction: buildFutureSelfSystemPrompt(profile, history, paraphrased),
+    systemInstruction: buildFutureSelfSystemPrompt(profile, history, paraphrased, journalMemories),
   })
 
   const chat = model.startChat({

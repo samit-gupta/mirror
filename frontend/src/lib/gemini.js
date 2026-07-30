@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { normalizeProfileForFutureSelf } from './profiles'
+import { extractPatterns } from './patternExtractor'
 
 const MODEL = 'gemini-2.5-flash'
 
@@ -136,7 +137,14 @@ function buildJournalSection(journalMemories) {
   return `\nJOURNAL INSIGHTS\nFrom their own writing, you know:\n${lines}\n\nUse these as quiet background understanding — not as topics to raise unprompted.`
 }
 
-export function buildFutureSelfSystemPrompt(profile, history = [], paraphrased = [], journalMemories = []) {
+function buildPatternsSection(patterns) {
+  if (!patterns?.length) return ''
+
+  const bullets = patterns.map((p) => `• ${p.summary}`).join('\n')
+  return `\nDETECTED BEHAVIOURAL PATTERNS\nThese recurring patterns have been identified from memory. Use them as silent context — do not recite or label them directly.\n${bullets}`
+}
+
+export function buildFutureSelfSystemPrompt(profile, history = [], paraphrased = [], journalMemories = [], patterns = []) {
   const normalized = normalizeProfileForFutureSelf(profile)
 
   if (!normalized) {
@@ -198,6 +206,7 @@ CONVERSATION MEMORY
 ${conversationGuidance}
 ${buildMemoriesSection(paraphrased)}
 ${buildJournalSection(journalMemories)}
+${buildPatternsSection(patterns)}
 
 What they share with you is shared in trust. Use it to understand them — never as leverage.
 
@@ -249,11 +258,14 @@ export async function generateFutureSelfReply({ profile, memories = [], history,
   const goalMemories = memories.filter((m) => m.memory_type !== 'journal')
   const journalMemories = memories.filter((m) => m.memory_type === 'journal')
 
-  const paraphrased = await paraphraseMemories(goalMemories, userId)
+  const [paraphrased, patterns] = await Promise.all([
+    paraphraseMemories(goalMemories, userId),
+    extractPatterns(memories),
+  ])
 
   const model = client.getGenerativeModel({
     model: MODEL,
-    systemInstruction: buildFutureSelfSystemPrompt(profile, history, paraphrased, journalMemories),
+    systemInstruction: buildFutureSelfSystemPrompt(profile, history, paraphrased, journalMemories, patterns),
   })
 
   const chat = model.startChat({

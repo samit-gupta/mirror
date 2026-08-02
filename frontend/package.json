@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node scripts/runConstitutionTests.mjs",
+    "test:ch17": "node tests/chapter17.test.mjs",
+    "test:ch18": "node tests/chapter18.test.mjs",
+    "test:ch19": "node tests/chapter19.test.mjs",
+    "test:judge": "node scripts/runConstitutionTests.mjs --judge"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -27,6 +32,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "node-fetch": "^3.3.2",
     "vite": "^8.0.12"
   }
 }
